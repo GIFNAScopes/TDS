@@ -34,7 +34,7 @@ class TDS{
 
   public:
   
-  TDS(const std::string &address);
+  TDS(const std::string &cfgFile);
   ~TDS();
   void TDSConfig(const std::string &configFile);
   void TDSSetAcqParams(const std::string &configFile);
@@ -83,6 +83,7 @@ class TDS{
 
   std::string FileName = "test";
   char fOutFileName [1024];
+  std::string fAddress ="TCPIP::192.168.1.15::INSTR";
 
   ViSession fResourceManager = VI_NULL;
   ViSession fViSession = VI_NULL;

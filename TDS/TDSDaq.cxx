@@ -10,7 +10,6 @@ void signal_handler(int signum) {
 
 void help() {
     std::cout << " TDSDaq options:" << std::endl;
-    std::cout << "    --a       : Set device address" << std::endl;
     std::cout << "    --c       : Set configFile" << std::endl;
     std::cout << "    --e       : Max events" << std::endl;
     std::cout << "    --h       : Print this help" << std::endl;
@@ -20,7 +19,6 @@ int main(int argc, char* argv[])
 {
 
   std::string cfgFile = "anais.cfg";
-  std::string address = "TCPIP::192.168.1.15::INSTR";
   int maxEvents =0;
 
     for (int i = 1; i < argc; i++) {
@@ -28,9 +26,6 @@ int main(int argc, char* argv[])
         if (arg == "--c") {
             i++;
             cfgFile = argv[i];
-        } else if (arg == "--a") {
-            i++;
-            address = argv[i];
         } else if (arg == "--e") {
             i++;
             maxEvents = std::atoi(argv[i]);
@@ -45,7 +40,6 @@ int main(int argc, char* argv[])
     }
 
   std::cout <<" Cfg file "<<cfgFile<<std::endl;
-  std::cout << "OSC address "<<address << std::endl;
   std::cout << "Maximum number of events ";
   maxEvents==0 ? std::cout<<"Infinite" : std::cout<<maxEvents;
   std::cout<<std::endl;
@@ -53,8 +47,7 @@ int main(int argc, char* argv[])
   TDS *TDSDaq = nullptr;
 
   try {
-    TDSDaq = new TDS(address);
-    TDSDaq->TDSSetAcqParams(cfgFile);//Also configures the OSC
+    TDSDaq = new TDS(cfgFile);//Also configures the OSC
   } catch(const TDSException& e) {
     std::cerr<<"TDSException was thrown: "<<e.what()<<std::endl;
     return -1;

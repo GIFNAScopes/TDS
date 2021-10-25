@@ -8,19 +8,9 @@
 
 std::atomic<bool> TDS::abrt(false);
 
-TDS::TDS(const std::string &address){
+TDS::TDS(const std::string &cfgFile){
 
-  ViStatus status;
-  // Open a default Session
-  status = viOpenDefaultRM(&fResourceManager);
-  if (status < VI_SUCCESS) { throw(TDSException(TDSError(fViSession, status)));}
-
-  // Open the gpib device
-  status = viOpen(fResourceManager, (ViChar*)address.c_str(), VI_NULL, VI_NULL, &fViSession);
-  if (status < VI_SUCCESS) { throw(TDSException(TDSError(fViSession, status)));}
-
-  ViUInt32 retCnt;
-  std::cout<<readTDS("*IDN?",128, retCnt)<<std::endl;
+  TDSSetAcqParams(cfgFile);
 
 }
 
@@ -71,7 +61,8 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
     std::stringstream ss(line);
     std::string first;
     ss>>first;
-      if(first=="NSIGNALS")ss >> fNSignals ;
+      if(first=="ADDRESS")ss >> fAddress;
+      else if(first=="NSIGNALS")ss >> fNSignals ;
       else if (first == "SAMPLING_RATE")ss >> fSamplingRate ;
       else if (first == "RANGE_CHANNEL_A") ss >> fRangeChannelA;
       else if (first == "RANGE_CHANNEL_B") ss >> fRangeChannelB;
@@ -91,10 +82,10 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
     do{
       fFileNumber++;
       sprintf(fOutFileName,"%s%04d.raw.%02d", FileName.c_str(), fFileNumber,fNFiles);
-      //std::cout<<fOutFileName<<std::endl;
     }while(stat (fOutFileName, &fb) == 0);
 
   std::cout << "\nConfiguration parameters: " << std::endl;
+  std::cout << "ADDRESS: " << fAddress << std::endl;
   std::cout << "N SIGNALS: " << fNSignals << std::endl;
   std::cout << "SAMPLING RATE: " << fSamplingRate << std::endl; 
   std::cout << "RANGE_CHANNEL_A: " << fRangeChannelA << std::endl;
@@ -104,9 +95,23 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
   std::cout << "PULSE DEPTH: " << fPulseDepth << std::endl;
   std::cout << "BLOCKS_PER_FILE: " <<fMaxBlocksPerFile << std::endl;
   std::cout << "TDS_CONFIGURATION_FILE: " << TDSConfigFile << std::endl;
+  std::cout << "NEGATIVE_POLARITY_CH_A: " << fPolarityA << std::endl;
+  std::cout << "NEGATIVE_POLARITY_CH_B: " << fPolarityB << std::endl;
+  std::cout << "VERBOSE_LEVEL: " << verbose << std::endl;
   std::cout << "File Name: " << fOutFileName << std::endl;
 
   ViUInt32 retCnt;
+  ViStatus status;
+
+  // Open a default Session
+  status = viOpenDefaultRM(&fResourceManager);
+  if (status < VI_SUCCESS) { throw(TDSException(TDSError(fViSession, status)));}
+
+  // Open the gpib device
+  status = viOpen(fResourceManager, (ViChar*)fAddress.c_str(), VI_NULL, VI_NULL, &fViSession);
+  if (status < VI_SUCCESS) { throw(TDSException(TDSError(fViSession, status)));}
+
+  std::cout<<readTDS("*IDN?",128, retCnt)<<std::endl;
 
   //Configure acquisition paramenters
   TDSConfig(TDSConfigFile);
