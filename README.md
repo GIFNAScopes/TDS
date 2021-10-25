@@ -1,5 +1,5 @@
 # TDSDAQ
-Data AcQuisition software for TDS Oscilloscopes, tested so far on TDS5034B, may need to be revisited for the other oscilloscope types. Based on a software developed for anais and it is meant to be used for DAQ . The computer talks to the oscilloscope via ethernet, altough other communication protocols may work if you the proper oscilloscope address is provided.
+Data AcQuisition software for TDS Oscilloscopes, tested so far on TDS5034B, may need to be revisited for the other oscilloscope types. Based on a software developed for anais and it is meant to be used for DAQ . The computer talks to the oscilloscope via ethernet, although other communication protocols may work if you the proper oscilloscope address is provided.
 
 ##Pre-requisites
 
@@ -33,6 +33,20 @@ source ../install/thisTDS.sh
 
 Now you are ready to go....
 
+Usefull commands:
+
+Analyze data from binary file `analyzeTDS --f TFIIIxxx.raw`
+Decode binary file and load it in TDSRoot `processdata TFIII0000.raw`
+
+TDSRoot (load root, TDS libraries and macros ):
+Load root (analyzed files) `readData("TFIIIxxx.raw")`
+Draw amplitude (int) vs area `tree->Draw("Hit0.DC:Hit0.Area")`
+Histogram with a given bin size and limits `tree->Draw("Hit0.Area>>h(1000,0,100000)")`
+Save spectrum (histogram) `saveSpc(h,"Test.txt")`
+Create a list after grafical cut `tree->Draw(">>list","CUTG")`
+Draw pulses from the list `drawPulse(i++)`
+Draw all pulses `drawAllPulses("OutName")`
+Reset Event list `tree->SetEventList(0)`
 
 ##Instructions for installing NI-VISA drivers
 Instructions for installations on Centos 8 (visa drivers are only supported on Ubuntu, CentOs, RedHat and SUSE, check this link for further details https://www.ni.com/es-es/support/downloads/drivers/download.ni-linux-device-drivers.html#409880)
