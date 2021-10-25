@@ -15,6 +15,7 @@
 #include <signal.h>
 #include <chrono>
 #include <atomic>
+#include <vector>
 
 class TDSException : public std::exception {
   public:
@@ -41,8 +42,8 @@ class TDS{
   void TDSInitFastFrame();
   void TDSAcquireFF();
   void TDSStopFF();
-  int8_t* TDSGetFF( int nChannels);
-  uint64_t* TDSGetTimes(int nFrames, bool first=false);
+  std::vector<int8_t> TDSGetFF( int nChannels);
+  std::vector<uint64_t> TDSGetTimes(int nFrames, bool first=false);
   void TDSWaitEvent();
   void TDSDisableEvent();
   void TDSExitFastFrame();
@@ -59,7 +60,7 @@ class TDS{
 
   private:
   
-  int verbose =1;
+  int verbose =0;
   int fNFrames=100;
   int fNBytestoRead;
   int timeDimBuffer;
@@ -80,6 +81,8 @@ class TDS{
 
   double initTime=0;
   double deadTime=0;
+
+  int fileSize =0;
 
   std::string FileName = "test";
   char fOutFileName [1024];

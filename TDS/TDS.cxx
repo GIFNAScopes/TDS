@@ -212,7 +212,7 @@ void TDS::TDSStopFF()
 
 }
 
-int8_t* TDS::TDSGetFF( int nChannels)
+std::vector<int8_t> TDS::TDSGetFF( int nChannels)
 {
   ViStatus status;
   ViUInt32 retCnt=0;
@@ -231,19 +231,17 @@ int8_t* TDS::TDSGetFF( int nChannels)
     // Stored in NBytesToRead
     status = viRead(fViSession, (ViByte*)cmd.c_str(), fNBytestoRead , &retCnt);
 
-    int acc=0;
-      while (fDimBuffer != acc){
+      while (fDimBuffer != retCnt){
         status = viRead(fViSession,(ViBuf)&buffer[fDimBuffer*nch], fDimBuffer, &retCnt);
         if (status < VI_SUCCESS) {throw(TDSException(TDSError(fViSession, status)));}
-        acc+=retCnt;
       }
   }
 
-  return buffer.data();
+  return buffer;
 }
 
 
-uint64_t* TDS::TDSGetTimes(int nFrames, bool first){
+std::vector<uint64_t> TDS::TDSGetTimes(int nFrames, bool first){
 
   ViStatus status;
   ViUInt32 retCnt=0;
@@ -264,17 +262,17 @@ uint64_t* TDS::TDSGetTimes(int nFrames, bool first){
       char timeStamp[256];
       strncpy(timeStamp, ini, 36);
       if (first && i==0){
-        initTime = (uint64_t)TranslateTimeStamp(timeStamp);
+        initTime = TranslateTimeStamp(timeStamp);
         tickBuffer[i]=0;
       } else {
         double tf = TranslateTimeStamp(timeStamp);
         tickBuffer[i] = (uint64_t)(tf - initTime);
-        //std::cout<<i<<" "<<(double)tf<<" "<<(double)tf-initTime<<std::endl;
+        if(verbose>2)std::cout<<"TimeStamp "<<i<<" "<<(double)tf<<" "<<(double)tf-initTime<<std::endl;
       }
       ini += 36;
     }
 
-  return tickBuffer.data();
+  return tickBuffer;
 
 }
 
@@ -331,8 +329,8 @@ void TDS::Flush(){
   auto initT = std::chrono::high_resolution_clock::now();
 
   fNTriggers += fNFrames;
-  int8_t *pulses = TDSGetFF(fNSignals);
-  uint64_t *ticks = TDSGetTimes(fNFrames,fNTriggers==fNFrames);
+  auto pulses = TDSGetFF(fNSignals);
+  auto ticks = TDSGetTimes(fNFrames,fNTriggers==fNFrames);
 
   ANABlockHead BlockHead;
   // RT Ticks
@@ -340,7 +338,7 @@ void TDS::Flush(){
   // LT Ticks
   BlockHead.LTTicks = BlockHead.RTTicks-deadTime;
   
-  std::cout<<ticks[0]<<" "<<(double)BlockHead.RTTicks<<std::endl;
+  if(verbose>1)std::cout<<ticks[0]<<" "<<(double)BlockHead.RTTicks<<std::endl;
 
   BlockHead.TimeStamp = (uint64_t)std::chrono::seconds(std::time(NULL)).count();
 
@@ -354,25 +352,31 @@ void TDS::Flush(){
   BlockHead.NegPolarity[0] =fPolarityA;BlockHead.NegPolarity[1] =fPolarityB;
   BlockHead.Pretrigger = fPreTrigger;
   BlockHead.PSize = fPulseDepth;
-  BlockHead.SRate = (uint64_t) (fSamplingRate*1000000);
-
+  BlockHead.SRate = fSamplingRate;
 
   std::ofstream FOut (fOutFileName, std::ios::binary | std::ios::app);
   std::cout<<"File "<<fOutFileName<<" opened"<<std::endl;
   FOut.write((char*)&BlockHead, sizeof(BlockHead));
-
+  fileSize += sizeof(BlockHead);
     for (int ev=0; ev<fNFrames; ev++){
       ANAEventHead EventHead;
       EventHead.clockTicksRT  = ticks[ev];
       EventHead.clockTicksLT  = EventHead.clockTicksRT - (uint64_t)deadTime;
       FOut.write((char*)&EventHead, sizeof(EventHead));
+      fileSize += sizeof(EventHead);
         for(int j=0;j<fNSignals;j++){
             int index = j*fNFrames*fPulseDepth+ev*fPulseDepth;
-            //std::cout<<"Pulses index "<<index<<" "<<(int)pulses[index]<<std::endl;
-	    FOut.write((char*)&pulses[index], fPulseDepth);
+            if(verbose>1)std::cout<<"Pulses index "<<index<<std::endl;
+	      if(verbose>2){
+                for(int i=0;i<fPulseDepth;i++)
+                  std::cout<<i<<" "<<pulses[index+i]<<std::endl;
+              }
+            FOut.write((char*)&pulses[index], fPulseDepth);
+            fileSize += fPulseDepth;
         }
     }
-
+  //std::cout<<"File size "<<fileSize<<std::endl;
+  //FOut.close();
   std::cout<<"Pulses written in file "<<std::endl;
 
   fNBlocksPerFile++;
@@ -388,7 +392,7 @@ void TDS::Flush(){
 
   auto endTime = std::chrono::high_resolution_clock::now();
   deadTime += std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - initT).count() * 1E-3;
-  if(verbose>0)std::cout << "DEAD: " << deadTime << std::endl;
+  if(verbose>0)std::cout << "DeadTime: " << deadTime << std::endl;
 
 }
 
@@ -400,8 +404,8 @@ void TDS::Start(const int &maxEvents){
   while(!abrt && (fNTriggers <maxEvents || maxEvents==0) ){
     TDSAcquireFF();
     TDSWaitEvent();
-    Flush();
     TDSStopFF();
+    Flush();
   }
 
   TDSExitFastFrame();
