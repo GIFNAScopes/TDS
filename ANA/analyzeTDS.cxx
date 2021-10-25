@@ -59,7 +59,7 @@ int main(int argc, char ** argv)
           std::string fileRoot = fName +".root";
           analizeTDS(fName, fileRoot);
           nFiles++;
-          sprintf(outFileName,".%02d", fileName.c_str(), nFiles);
+          sprintf(outFileName,"%s.%02d", fileName.c_str(), nFiles);
         }
     
     

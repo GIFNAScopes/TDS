@@ -31,7 +31,7 @@ class Hit
 public:
     const int pulse_depth {2500};
     const float VScale {0};
-    const float SRate {0};
+    const float SRate {1};
     const int Pretrigger {0};
     const bool negPolarity{true};
 
