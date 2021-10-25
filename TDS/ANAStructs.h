@@ -13,7 +13,7 @@ struct ANABlockHead {
   uint64_t    TimeStamp;    
   uint64_t    RTTicks;       
   uint64_t    LTTicks;       
-  uint64_t    SRate;        
+  uint16_t    SRate;
   uint16_t    PSize;        
   uint16_t    Pretrigger;   
   uint16_t    mVdiv[4];     
