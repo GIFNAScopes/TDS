@@ -76,12 +76,16 @@ void readData(const std::string &fileName)
   tree = new TChain("tree");
 
   struct stat fb;
-   if(stat (fileName.c_str(), &fb) == 0){
+   char outFileName[1024];
+   sprintf(outFileName,"%s.root", fileName.c_str());
+   if(fileName.find(".root") !=std::string::npos && stat (fileName.c_str(), &fb) == 0){
       std::cout<<fileName<<std::endl;
       tree->Add(fileName.c_str(), -1);
+    } else if(stat (outFileName, &fb) == 0){
+      std::cout<<outFileName<<std::endl;
+      tree->Add(outFileName, -1);
     } else {
       int nFiles=1;
-      char outFileName[1024];
       sprintf(outFileName,"%s.%02d.root", fileName.c_str(), nFiles);
         if(stat (outFileName, &fb) !=0){
           std::cerr<<"Filename "<<outFileName<<" not found"<<std::endl;
@@ -141,11 +145,20 @@ void readData(const std::string &fileName)
 ///////////////////////////////////////////////////
 void addData(const std::string &fileName)
 {
-  struct stat fb;
+     if(!tree){
+       std::cout<<"Tree is not inilialized, use readData first "<<std::endl;
+       return;
+     }
 
-    if(stat (fileName.c_str(), &fb) == 0){
+   struct stat fb;
+   char outFileName[1024];
+   sprintf(outFileName,"%s.root", fileName.c_str());
+   if(fileName.find(".root") !=std::string::npos && stat (fileName.c_str(), &fb) == 0){
       std::cout<<fileName<<std::endl;
       tree->Add(fileName.c_str(), -1);
+    } else if(stat (outFileName, &fb) == 0){
+      std::cout<<outFileName<<std::endl;
+      tree->Add(outFileName, -1);
     } else {
       int nFiles=1;
       char outFileName[1024];
@@ -196,8 +209,8 @@ void drawPulse(int p){
  
   histos.resize(NHITS);
  
-  for(int iii=0;iii<NHITS;iii++) {
-	  histos[iii] = myHits[iii]->getHisto(ent);
+  for(int iii=0;iii<NHITS;iii++){
+	  histos[iii] = (TH1C *)(myHits[iii]->getHisto()->Clone()) ;
   	  histos[iii]->SetStats(0);
 	  histos[iii]->GetYaxis()->SetLabelSize(.08);
 	  histos[iii]->GetXaxis()->SetLabelSize(.08);
@@ -245,7 +258,7 @@ void drawAllPulses(std::string fName ="")
     ent = tree->GetEntryNumber(cont);
     tree->GetEntry(ent); 
       for(int iii=0;iii<NHITS;iii++){
-        TH1C *h = myHits[iii]->getHisto(ent);
+        TH1C *h = (TH1C *)(myHits[iii]->getHisto()->Clone());
         pulseAll[iii]->Add(h);
         delete h;
       }
