@@ -62,6 +62,8 @@ int main(int argc, char* argv[])
     std::cout << "Installing signal handler" << std::endl;
     // Install signal handler
     signal(SIGINT, signal_handler);
+    signal(SIGABRT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
   try {
     auto start = std::chrono::system_clock::now();

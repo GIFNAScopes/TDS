@@ -61,6 +61,7 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
     std::stringstream ss(line);
     std::string first;
     ss>>first;
+    if(verbose>2)std::cout<<line<<std::endl;
       if(first=="ADDRESS")ss >> fAddress;
       else if(first=="NSIGNALS")ss >> fNSignals ;
       else if (first == "SAMPLING_RATE")ss >> fSamplingRate ;
@@ -231,10 +232,11 @@ std::vector<int8_t> TDS::TDSGetFF( int nChannels)
     // Stored in NBytesToRead
     status = viRead(fViSession, (ViByte*)cmd.c_str(), fNBytestoRead , &retCnt);
 
-      while (fDimBuffer != retCnt){
+      do {
         status = viRead(fViSession,(ViBuf)&buffer[fDimBuffer*nch], fDimBuffer, &retCnt);
         if (status < VI_SUCCESS) {throw(TDSException(TDSError(fViSession, status)));}
-      }
+	if(verbose>1)std::cout<<"NBytes readed "<<retCnt<<" expected "<<fDimBuffer<<std::endl;
+      }while (fDimBuffer != retCnt);
   }
 
   return buffer;
@@ -352,10 +354,10 @@ void TDS::Flush(){
   BlockHead.NegPolarity[0] =fPolarityA;BlockHead.NegPolarity[1] =fPolarityB;
   BlockHead.Pretrigger = fPreTrigger;
   BlockHead.PSize = fPulseDepth;
-  BlockHead.SRate = fSamplingRate;
+  BlockHead.SRate = fSamplingRate*1E6;
 
   std::ofstream FOut (fOutFileName, std::ios::binary | std::ios::app);
-  std::cout<<"File "<<fOutFileName<<" opened"<<std::endl;
+  if(verbose>0)std::cout<<"File "<<fOutFileName<<" opened"<<std::endl;
   FOut.write((char*)&BlockHead, sizeof(BlockHead));
   fileSize += sizeof(BlockHead);
     for (int ev=0; ev<fNFrames; ev++){
@@ -369,7 +371,7 @@ void TDS::Flush(){
             if(verbose>1)std::cout<<"Pulses index "<<index<<std::endl;
 	      if(verbose>2){
                 for(int i=0;i<fPulseDepth;i++)
-                  std::cout<<i<<" "<<pulses[index+i]<<std::endl;
+                  std::cout<<i<<" "<<(int)pulses[index+i]<<std::endl;
               }
             FOut.write((char*)&pulses[index], fPulseDepth);
             fileSize += fPulseDepth;
@@ -377,7 +379,10 @@ void TDS::Flush(){
     }
   //std::cout<<"File size "<<fileSize<<std::endl;
   //FOut.close();
-  std::cout<<"Pulses written in file "<<std::endl;
+  if(verbose>0)std::cout<<"Pulses written in file "<<std::endl;
+
+  // Refresh some information in screen.  !
+  fprintf(stdout,"%s Real time: %0.2lf Live time: %0.2lf Events: %d %d\n",fOutFileName,(double)BlockHead.RTTicks/1000000.,(double)BlockHead.LTTicks/1000000., fNFrames, fNTriggers);
 
   fNBlocksPerFile++;
 
@@ -386,9 +391,6 @@ void TDS::Flush(){
       sprintf(fOutFileName,"%s%04d.raw.%02d", FileName.c_str(), fFileNumber,fNFiles);
       fNBlocksPerFile=0;
     }
-
-  // Refresh some information in screen.  !
-  fprintf(stdout,"N Events in buffer: %d %d \nReal time: %lf Live time: %lf \nNFiles: %d\n", fNFrames, fNTriggers,(double)BlockHead.RTTicks/1000000.,(double)BlockHead.LTTicks/1000000.,fNFiles);
 
   auto endTime = std::chrono::high_resolution_clock::now();
   deadTime += std::chrono::duration_cast<std::chrono::nanoseconds>(endTime - initT).count() * 1E-3;
