@@ -10,12 +10,11 @@
 #include <TTree.h>
 #include <Rtypes.h>
 
-void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot){
+void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot, int &index){
 
   std::ifstream fin (fileRaw, std::ios::in | std::ios::binary);
   int DCPOINTS = 50;
 
-  int c=0;
   int pulse_depth;
   double srate;
 
@@ -28,12 +27,14 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot)
   std::vector<Hit *> myHits;
 
   int nEvents=0, nHits=0, size=0;
+  bool first = true;
 
   do{
 
     ANABlockHead blockhead;
-      if(c==0){
+      if(first){
         fin.read((char*)&blockhead,sizeof(ANABlockHead));
+        if(fin.peek() == EOF)break;
         nEvents = blockhead.NEvents;
         nHits = blockhead.NHits/blockhead.NEvents;
         srate = blockhead.SRate;
@@ -46,6 +47,7 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot)
           std::string hitName = "Hit"+std::to_string(i);
           tree->Branch(hitName.c_str(), "Hit", &myHits[i] /*, 32000, 99*/);
         }
+        first=false;
       } else {
         ANABlockHead dummyBH;
         fin.read((char*)&dummyBH,sizeof(ANABlockHead));
@@ -69,7 +71,8 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot)
             fin.read((char *)&buffer[0],pulse_depth);
             size += pulse_depth;
             if(fin.peek() == EOF)break;
-            Hit hit(pulse_depth,blockhead.mVdiv[i], srate, blockhead.Pretrigger,blockhead.NegPolarity[i], buffer);
+            //std::transform(buffer.begin(), buffer.end(), std::back_inserter(sData), [](int8_t x) { return (Short_t)x;});
+            Hit hit(index,pulse_depth,blockhead.mVdiv[i], srate, blockhead.Pretrigger,blockhead.NegPolarity[i], buffer);
             myHits[i] =&hit;
             myHits[i]->SetClockTickLT (eventhead.clockTicksLT);
             myHits[i]->SetClockTickRT (eventhead.clockTicksRT);
@@ -78,16 +81,17 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot)
             prevTime = myHits[0]->GetClockTickRT();
             myHits[i]->analyzeHit();
           }
-        c++;
+        index++;
         tree->Fill();
       }
 
-    if(c%500==0)std::cout << "Processed events: "<<c<< std::endl;
+    if(index%500==0)std::cout << "Processed events: "<<index<< std::endl;
   } while(fin.peek() != EOF);
 
-  std::cout<<"Done "<<c<<" event processed"<<std::endl;
+  std::cout<<"Done "<<index<<" event processed"<<std::endl;
   
   fout->Write();
+  fout->Close();
 
 }
 

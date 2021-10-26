@@ -77,13 +77,15 @@ void Hit::analyzeHit( ){
 
 std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
 
-    std::vector<double> smoothed(Pulse.size(),0);
-    for (int i = 0; i < Pulse.size(); i++){
+
+    std::vector<double> smoothed(pulse_depth);
+    
+    for (int i = 0; i < pulse_depth; i++){
     int nPoints=0;
       for (int j = - neighbours; j<=neighbours;j++){
         int index = i + j;
-        if(index<0||index>= Pulse.size())continue;
-        int val = Pulse[index];
+        if(index<0||index>= pulse_depth)continue;
+        int val = Pulse->GetBinContent(index+1);
         smoothed[i] += val;
         nPoints++;
       }
@@ -93,13 +95,9 @@ std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
   return smoothed;
 }
 
-TH1C *Hit::getHisto(const int &index){
+const TH1C *Hit::getHisto( ){
 
-  std::string hName = "Hit"+std::to_string(index);
-  TH1C *h = new TH1C (hName.c_str(),hName.c_str(),Pulse.size(),0,Pulse.size());
-  //auto sm = GetSignalSmoothed();
-  for(int i=0;i<Pulse.size();i++)h->SetBinContent(i+1,Pulse[i]);
-  return h;
+  return Pulse;
 }
 
 

@@ -10,11 +10,11 @@
 
 class Hit 
 {
-  private:
+  protected:
     ULong64_t ClockTickLT;
     ULong64_t ClockTickRT;
     ULong64_t DeltaTime; // Time since previous event
-    std::vector<int8_t> Pulse;
+    TH1C *Pulse = nullptr;
     Float_t High;
     Short_t Max;
     Float_t Area;
@@ -26,7 +26,7 @@ class Hit
     Float_t Baseline;
     Float_t BaselineSigma;
     Bool_t saturated = false;
-
+    Int_t ident;
 
 public:
     const int pulse_depth {2500};
@@ -67,19 +67,24 @@ public:
     Short_t GetMax() {return Max;};
     Float_t GetArea() {return Area;};
 
-    Hit(int size, int hscale, float srate, int pretrigger, bool nPol) : pulse_depth(size),VScale(hscale),SRate(srate),Pretrigger(pretrigger),negPolarity(nPol){
-      Pulse.resize(pulse_depth,0);
+    Hit(int id, int size, int hscale, float srate, int pretrigger,bool nPol, std::vector<int8_t> &sData) : ident(id), pulse_depth(size),VScale(hscale),SRate(srate),Pretrigger(pretrigger), negPolarity(nPol) {
+      std::string pName = "Pulse"+std::to_string(ident);
+      Pulse = new TH1C (pName.c_str(),pName.c_str(), sData.size(), 0, sData.size());
+      for(int i=0;i<sData.size();i++)Pulse->SetBinContent(i+1,sData[i]);
     }
 
-    Hit(int size, int hscale, float srate, int pretrigger,bool nPol, std::vector<int8_t> &sData) : pulse_depth(size),VScale(hscale),SRate(srate),Pretrigger(pretrigger), negPolarity(nPol) , Pulse(sData) {
+    Hit(){
+      Pulse = nullptr;
     }
 
-    Hit(){}
+    ~Hit(){
+      if(Pulse)delete Pulse;
+      Pulse = nullptr;
+    }
 
     void analyzeHit( );
     std::vector<double> GetSignalSmoothed(int neighbours = 5);
-    TH1C *getHisto(const int &index);
-    
+    const TH1C *getHisto( );
 
    ClassDef(Hit, 1)
 

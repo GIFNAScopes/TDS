@@ -6,7 +6,7 @@
 
 namespace AnaTDS {
 
-void analizeTDS(const std::string &fileRaw, const std::string &fileRoot);
+void analizeTDS(const std::string &fileRaw, const std::string &fileRoot, int &index);
 void saveSpc(const TH1 *h, const std::string &filename);
 
 }

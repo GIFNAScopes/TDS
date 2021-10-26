@@ -42,9 +42,10 @@ int main(int argc, char ** argv)
     }
 
   struct stat fb;
+  int index=0;
     if(stat (fileName.c_str(), &fb) == 0){
       std::string fileRoot = fileName +".root";
-      analizeTDS(fileName, fileRoot);
+      analizeTDS(fileName, fileRoot,index);
     } else {
       int nFiles=1;
       char outFileName[1024];
@@ -57,7 +58,7 @@ int main(int argc, char ** argv)
         while(stat (outFileName, &fb) == 0 ){
           std::string fName = outFileName;
           std::string fileRoot = fName +".root";
-          analizeTDS(fName, fileRoot);
+          analizeTDS(fName, fileRoot,index);
           nFiles++;
           sprintf(outFileName,"%s.%02d", fileName.c_str(), nFiles);
         }
