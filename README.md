@@ -11,12 +11,12 @@ This project requires ROOT installation and NI-VISA drivers, the instructions to
 Checkout the repository:
 ```
 cd $HOME
-git clone https://github.com... TDSDaq
-cd TDSDAQ
+git clone https://lfna.unizar.es/gifna/tds.git TDS
+cd TDS
 ```
 Compile and install:
 ```
-cd ~/TDSDaq
+cd TDS
 mkdir build
 cd build
 cmake ../ -DCMAKE_INSTALL_PREFIX=../install/ 
