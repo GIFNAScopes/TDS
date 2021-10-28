@@ -95,9 +95,4 @@ std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
   return smoothed;
 }
 
-const TH1C *Hit::getHisto( ){
-
-  return Pulse;
-}
-
 
