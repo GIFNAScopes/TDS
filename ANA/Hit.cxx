@@ -6,6 +6,15 @@
 
 ClassImp(Hit);
 
+Hit::Hit(int ch, int id, int size, int hscale, float srate, int pretrigger,bool nPol, std::vector<Char_t> &sData) : ident(id), pulse_depth(size),VScale(hscale),SRate(srate),Pretrigger(pretrigger), negPolarity(nPol), Pulse(sData) {
+    }
+
+Hit::Hit(){
+}
+
+Hit::~Hit(){
+}
+
 void Hit::analyzeHit( ){
 
   auto smoothed = GetSignalSmoothed();
@@ -85,7 +94,7 @@ std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
       for (int j = - neighbours; j<=neighbours;j++){
         int index = i + j;
         if(index<0||index>= pulse_depth)continue;
-        int val = Pulse->GetBinContent(index+1);
+        int val = Pulse[i];
         smoothed[i] += val;
         nPoints++;
       }
@@ -93,6 +102,16 @@ std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
     }
 
   return smoothed;
+}
+
+TH1C *Hit::getHisto( const int &ch ){
+
+  std::string hName = "CH"+std::to_string(ch)+"_Hit"+std::to_string(ident);
+  TH1C *h = new TH1C (hName.c_str(),hName.c_str(),Pulse.size(),0,Pulse.size());
+  //auto sm = GetSignalSmoothed();
+  for(int i=0;i<Pulse.size();i++)h->SetBinContent(i+1,Pulse[i]);
+  return h;
+
 }
 
 

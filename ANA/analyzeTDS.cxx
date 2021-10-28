@@ -7,8 +7,6 @@
 
 #include "AnaTDS.h"
 
-using namespace AnaTDS;
-
 void help() {
     std::cout << " analyzeTDS options:" << std::endl;
     std::cout << "    --f       : Filename" << std::endl;
@@ -45,7 +43,7 @@ int main(int argc, char ** argv)
   int index=0;
     if(stat (fileName.c_str(), &fb) == 0){
       std::string fileRoot = fileName +".root";
-      analizeTDS(fileName, fileRoot,index);
+      AnaTDS::analizeTDS(fileName, fileRoot,index);
     } else {
       int nFiles=1;
       char outFileName[1024];
@@ -58,7 +56,7 @@ int main(int argc, char ** argv)
         while(stat (outFileName, &fb) == 0 ){
           std::string fName = outFileName;
           std::string fileRoot = fName +".root";
-          analizeTDS(fName, fileRoot,index);
+          AnaTDS::analizeTDS(fName, fileRoot,index);
           nFiles++;
           sprintf(outFileName,"%s.%02d", fileName.c_str(), nFiles);
         }
