@@ -8,6 +8,8 @@ double entries=0;
 int i=0;
 int NHITS=0;
 
+const std::vector <int> colors {kBlue, kRed, kGreen,kBlack };
+
 TFile * myFile=nullptr;
 TChain * tree=nullptr;
 std::vector<Hit *> myHits;
@@ -103,40 +105,44 @@ void readData(const std::string &fileName)
   entries = tree->GetEntries();
   tree->SetEstimate(entries);
 
-  //tree->StartViewer();
+  //tree->Print();
 
    for(NHITS=0;NHITS<4;NHITS++) {
     std::string brName = "Hit"+std::to_string(NHITS);
     if(!tree->GetBranch(brName.c_str()))break;
   }
-  //--NHITS;
+
+  myHits.resize(NHITS,nullptr);
+
   std::cout<<"Number of hits "<<NHITS<<std::endl;
-  myHits.resize(NHITS);
 
   for(int b=0;b<NHITS;b++){
     std::string brName = "Hit"+std::to_string(b);
-    myHits[i] = nullptr;
-    tree->SetBranchAddress(brName.c_str(), &myHits[i]);
+    std::cout<<brName<<std::endl;
+    tree->SetBranchAddress(brName.c_str(), &myHits[b]);
     tree->GetEntry(0);
-    std::cout<<"CH "<<b+1<< " "<<  myHits[i]->VScale<<" mv/Div "<<std::endl;
+    std::cout<<"CH "<<b+1<< " "<<  myHits[b]->GetVScale()<<" mv/Div "<<std::endl;
   }
 
-  std::cout << "Sampling Rate: " << (myHits[0]->SRate) << " Hz  ( " << 1E9/(myHits[0]->SRate) << " ns/pt)"<< std::endl;
-  std::cout << "Size Pulse: " << (myHits[0]->pulse_depth) << " points"<<std::endl;
-  std::cout << "Pulse Length: "<< 1E9*float(myHits[0]->pulse_depth)/(myHits[0]->SRate)<< " ns"<< std::endl;
-  std::cout << "PreTrigger: " << myHits[0]->Pretrigger << " %" << std::endl << std::endl;
+
+    
+
+  std::cout << "Sampling Rate: " << (myHits[0]->GetSRate()) << " Hz  ( " << 1E9/(myHits[0]->GetSRate()) << " ns/pt)"<< std::endl;
+  std::cout << "Size Pulse: " << (myHits[0]->GetPulseDepth()) << " points"<<std::endl;
+  std::cout << "Pulse Length: "<< 1E9*float(myHits[0]->GetPulseDepth())/(myHits[0]->GetSRate())<< " ns"<< std::endl;
+  std::cout << "PreTrigger: " << myHits[0]->GetPretrigger() << " %" << std::endl << std::endl;
   //gROOT->ProcessLine(".x  $ANAPIII/alias.C");
 
   // Maria 150307
   std::cout << "N Entries: " << entries << std::endl;
   tree->GetEntry(entries-1);
   double auxRTime = myHits[0]->GetClockTickRT()*1E-6;
-  std::cout << "Real Time: " << auxRTime << std::endl;
+  std::cout << "Real Time: " << auxRTime <<" seconds"<< std::endl;
   double auxLTime = myHits[0]->GetClockTickLT()*1E-6;
-  std::cout << "Live Time: " << auxLTime << std::endl;
+  std::cout << "Live Time: " << auxLTime<<" seconds" << std::endl;
   tree->GetEntry(0);
-  std::cout << "Inc Real Time: " << auxRTime - myHits[0]->GetClockTickRT()*1E-6 << std::endl;
-  std::cout << "Inc Live Time: " << auxLTime - myHits[0]->GetClockTickLT()*1E-6 << std::endl;
+  std::cout << "Inc Real Time: " << auxRTime - myHits[0]->GetClockTickRT()*1E-6<<" seconds" << std::endl;
+  std::cout << "Inc Live Time: " << auxLTime - myHits[0]->GetClockTickLT()*1E-6<<" seconds" << std::endl;
 
 }
 ///////////////////////////////////////////////////
@@ -210,13 +216,17 @@ void drawPulse(int p){
   histos.resize(NHITS);
  
   for(int iii=0;iii<NHITS;iii++){
-	  histos[iii] = (TH1C *)(myHits[iii]->getHisto()->Clone()) ;
+      histos[iii] = (TH1C *)(myHits[iii]->getHisto(iii));
+      histos[iii]->SetLineColor(colors[iii]);
+	if(iii==0){
   	  histos[iii]->SetStats(0);
-	  histos[iii]->GetYaxis()->SetLabelSize(.08);
-	  histos[iii]->GetXaxis()->SetLabelSize(.08);
-	    if(iii==0)histos[iii]->Draw();
-	    else histos[iii]->Draw("SAME");
-	  (histos[iii]->GetYaxis())->SetRangeUser(-128,128);
+	  histos[iii]->GetYaxis()->SetLabelSize(.03);
+	  histos[iii]->GetXaxis()->SetLabelSize(.03);
+	  histos[iii]->GetYaxis()->SetRangeUser(-128,128);
+	  histos[iii]->Draw();
+	} else {
+	  histos[iii]->Draw("SAME");
+	}
   }
 
 }
@@ -232,6 +242,11 @@ void drawPulse(int p){
 ///////////////////////////////////////////////////////
 void drawAllPulses(std::string fName ="")
 {
+
+ for(auto &h : histos){
+    delete h;
+ }
+ histos.clear();
 
  for(auto &p : pulseAll){
    delete p;
@@ -250,15 +265,15 @@ void drawAllPulses(std::string fName ="")
 
   pulseAll.resize(NHITS);
     for(int iii=0;iii<NHITS;iii++) {
-      std::string pName = "Pulse"+std::to_string(NHITS+1);
-      pulseAll[iii] = new TH1F (pName.c_str(), pName.c_str(),myHits[iii]->pulse_depth,0,myHits[iii]->pulse_depth);// 2500
+      std::string pName = "Pulse"+std::to_string(iii+1);
+      pulseAll[iii] = new TH1F (pName.c_str(), pName.c_str(),myHits[iii]->GetPulseDepth(),0,myHits[iii]->GetPulseDepth());// 2500
     }
 
   for (cont = 0; cont<max; cont ++){
     ent = tree->GetEntryNumber(cont);
     tree->GetEntry(ent); 
       for(int iii=0;iii<NHITS;iii++){
-        TH1C *h = (TH1C *)(myHits[iii]->getHisto()->Clone());
+        TH1C *h = (TH1C *)(myHits[iii]->getHisto(iii));
         pulseAll[iii]->Add(h);
         delete h;
       }
@@ -267,8 +282,16 @@ void drawAllPulses(std::string fName ="")
   // Maria 260307
   for(int iii=0;iii<NHITS;iii++) {
     pulseAll[iii]->Scale(1./max);
-    pulseAll[iii]->SetStats(0);
-    pulseAll[iii]->Draw(); 
+    pulseAll[iii]->SetLineColor(colors[iii]);
+    if(iii==0){
+      pulseAll[iii]->SetStats(0);
+      pulseAll[iii]->GetYaxis()->SetLabelSize(.03);
+      pulseAll[iii]->GetXaxis()->SetLabelSize(.03);
+      if(NHITS>1)pulseAll[iii]->GetYaxis()->SetRangeUser(-128,128);
+      pulseAll[iii]->Draw();
+    } else {
+      pulseAll[iii]->Draw("SAME");
+    }
 
 	if(!fName.empty()){
 	  std::string name = "CH"+std::to_string(iii)+"_"+ fName;
