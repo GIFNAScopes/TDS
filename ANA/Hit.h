@@ -7,14 +7,15 @@
 
 #include <Rtypes.h>
 #include <TH1C.h>
+#include <TObject.h>
 
 class Hit 
 {
-  protected:
+  private:
     ULong64_t ClockTickLT;
     ULong64_t ClockTickRT;
     ULong64_t DeltaTime; // Time since previous event
-    TH1C *Pulse = nullptr;
+    std::vector<Char_t> Pulse;
     Float_t High;
     Short_t Max;
     Float_t Area;
@@ -27,13 +28,13 @@ class Hit
     Float_t BaselineSigma;
     Bool_t saturated = false;
     Int_t ident;
+    Int_t pulse_depth =2500;
+    Float_t VScale =0;
+    Float_t SRate =1;
+    Int_t Pretrigger =0;
+    Bool_t negPolarity =0;
 
 public:
-    const int pulse_depth {2500};
-    const float VScale {0};
-    const float SRate {1};
-    const int Pretrigger {0};
-    const bool negPolarity{true};
 
     Float_t AreaToPhys(Float_t a)
     {
@@ -67,26 +68,20 @@ public:
     Short_t GetMax() {return Max;};
     Float_t GetArea() {return Area;};
 
-    Hit(int id, int size, int hscale, float srate, int pretrigger,bool nPol, std::vector<int8_t> &sData) : ident(id), pulse_depth(size),VScale(hscale),SRate(srate),Pretrigger(pretrigger), negPolarity(nPol) {
-      std::string pName = "Pulse"+std::to_string(ident);
-      Pulse = new TH1C (pName.c_str(),pName.c_str(), sData.size(), 0, sData.size());
-      for(int i=0;i<sData.size();i++)Pulse->SetBinContent(i+1,sData[i]);
-    }
+    Int_t GetPulseDepth(){return pulse_depth;};
+    Float_t GetVScale() {return VScale;};
+    Float_t GetSRate() {return SRate;};
+    Int_t GetPretrigger() {return Pretrigger;};
+    Bool_t GetNegPoloarity(){return negPolarity;};
 
-    Hit(){
-      Pulse = nullptr;
-    }
-
-    /*~Hit(){
-      if(Pulse)delete Pulse;
-      Pulse = nullptr;
-    }*/
+    Hit(int ch, int id, int size, int hscale, float srate, int pretrigger,bool nPol, std::vector<Char_t> &sData);
+    Hit();
+    ~Hit();
 
     void analyzeHit( );
     std::vector<double> GetSignalSmoothed(int neighbours = 5);
-    const TH1C *getHisto( ){ //!
-      return Pulse;
-    }
+    
+    TH1C *getHisto(const int &ch );//!
 
    ClassDef(Hit, 1)
 
