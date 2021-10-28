@@ -77,14 +77,16 @@ public:
       Pulse = nullptr;
     }
 
-    ~Hit(){
+    /*~Hit(){
       if(Pulse)delete Pulse;
       Pulse = nullptr;
-    }
+    }*/
 
     void analyzeHit( );
     std::vector<double> GetSignalSmoothed(int neighbours = 5);
-    const TH1C *getHisto( );
+    const TH1C *getHisto( ){ //!
+      return Pulse;
+    }
 
    ClassDef(Hit, 1)
 
