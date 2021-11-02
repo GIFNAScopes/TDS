@@ -70,8 +70,8 @@ class TDS{
   // Default values
   int fNSignals=1;      // Number of signals
   int fSamplingRate=250; // 250 MHz = 4ns/p
-  int fRangeChannelA=200, fRangeChannelB=200;
-  int fPolarityA=1, fPolarityB=0;
+  int fRangeChannel[TDS_MAX_SIGNALS]={20};
+  int fPolarity[TDS_MAX_SIGNALS]={1};
   int fPreTrigger=200;
 
   int fFileNumber=-1;     // Number of the file (FileNameFileNumber.raw.NFiles)

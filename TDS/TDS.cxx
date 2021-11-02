@@ -65,8 +65,10 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
       if(first=="ADDRESS")ss >> fAddress;
       else if(first=="NSIGNALS")ss >> fNSignals ;
       else if (first == "SAMPLING_RATE")ss >> fSamplingRate ;
-      else if (first == "RANGE_CHANNEL_A") ss >> fRangeChannelA;
-      else if (first == "RANGE_CHANNEL_B") ss >> fRangeChannelB;
+      else if (first == "RANGE_CHANNEL_A") ss >> fRangeChannel[0];
+      else if (first == "RANGE_CHANNEL_B") ss >> fRangeChannel[1];
+      else if (first == "RANGE_CHANNEL_C") ss >> fRangeChannel[2];
+      else if (first == "RANGE_CHANNEL_D") ss >> fRangeChannel[3];
       else if (first == "PRETRIGGER") ss >> fPreTrigger;
       else if (first == "BUFFER_DIMENSION") ss >>fNFrames;
       else if (first == "BLOCKS_PER_FILE") ss >>fMaxBlocksPerFile;
@@ -74,8 +76,14 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
       else if (first == "TDS_CONFIGURATION_FILE") ss >>TDSConfigFile;
       else if (first == "FILE_NAME" ) ss >>FileName;
       else if (first == "VERBOSE_LEVEL" ) ss >>verbose;
-      else if (first == "NEGATIVE_POLARITY_CH_A") ss >> fPolarityA;
-      else if (first == "NEGATIVE_POLARITY_CH_B") ss >> fPolarityB;
+      else if (first == "NEGATIVE_POLARITY_CH_A") ss >> fPolarity[0];
+      else if (first == "NEGATIVE_POLARITY_CH_B") ss >> fPolarity[1];
+      else if (first == "NEGATIVE_POLARITY_CH_C") ss >> fPolarity[2];
+      else if (first == "NEGATIVE_POLARITY_CH_D") ss >> fPolarity[3];
+  }
+
+  if(fNSignals>TDS_MAX_SIGNALS ){
+    throw(TDSException("You tried to adquire "+std::to_string(fNSignals)+" while the maximum allowed is "+std::to_string(TDS_MAX_SIGNALS) ) );
   }
 
   fFileNumber=-1,fNFiles=1;
@@ -88,16 +96,18 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
   std::cout << "\nConfiguration parameters: " << std::endl;
   std::cout << "ADDRESS: " << fAddress << std::endl;
   std::cout << "N SIGNALS: " << fNSignals << std::endl;
-  std::cout << "SAMPLING RATE: " << fSamplingRate << std::endl; 
-  std::cout << "RANGE_CHANNEL_A: " << fRangeChannelA << std::endl;
-  std::cout << "RANGE_CHANNEL_B: " << fRangeChannelB << std::endl;
+  std::cout << "SAMPLING RATE: " << fSamplingRate << std::endl;
+    for(int i=0;i<fNSignals;i++)
+       std::cout << "RANGE_CHANNEL_"<<i+1<<": " << fRangeChannel[i] << std::endl;
+
   std::cout << "PRETRIGGER: " << fPreTrigger << std::endl;
   std::cout << "BUFFER_DIMENSION: " <<fNFrames << std::endl;
   std::cout << "PULSE DEPTH: " << fPulseDepth << std::endl;
   std::cout << "BLOCKS_PER_FILE: " <<fMaxBlocksPerFile << std::endl;
   std::cout << "TDS_CONFIGURATION_FILE: " << TDSConfigFile << std::endl;
-  std::cout << "NEGATIVE_POLARITY_CH_A: " << fPolarityA << std::endl;
-  std::cout << "NEGATIVE_POLARITY_CH_B: " << fPolarityB << std::endl;
+    for(int i=0;i<fNSignals;i++)
+       std::cout << "NEGATIVE_POLARITY_CH_"<<i+1<<": " << fPolarity[i] << std::endl;
+  
   std::cout << "VERBOSE_LEVEL: " << verbose << std::endl;
   std::cout << "File Name: " << fOutFileName << std::endl;
 
@@ -118,10 +128,11 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
   TDSConfig(TDSConfigFile);
   std::string cmd = "HORIZONTAL:MAIN:SAMPLERATE "+std::to_string(fSamplingRate)+"E6";
   writeTDS(cmd, retCnt);
-  cmd = "CH1:SCALE " + std::to_string(fRangeChannelA/1000.);
-  writeTDS(cmd, retCnt);
-  cmd = "CH2:SCALE " + std::to_string(fRangeChannelB/1000.);
-  writeTDS(cmd, retCnt);
+    for(int i=0;i<fNSignals;i++){
+      cmd = "CH"+std::to_string(i+1)+":SCALE " + std::to_string(fRangeChannel[i]/1000.);
+      writeTDS(cmd, retCnt);
+    }
+  
   cmd = "HORIZONTAL:RECORDLENGTH "+std::to_string(fPulseDepth);
   writeTDS(cmd, retCnt);
   cmd = "HORIZONTAL:TRIGGER:POSITION "+std::to_string(fPreTrigger);
@@ -131,6 +142,12 @@ void TDS::TDSSetAcqParams(const std::string &configFile){
   writeTDS(cmd, retCnt);
   cmd ="HORIZONTAL:FASTFRAME:COUNT "+std::to_string(fNFrames);
   writeTDS(cmd, retCnt);
+  //Make sure that all the recorded channels are ON
+    for(int i=0;i<fNSignals;i++){
+      cmd = "SELECT:CH"+std::to_string(i+1)+"  ON";
+      std::cout<<cmd<<std::endl;
+      writeTDS(cmd, retCnt);
+    }
 
   fDimBuffer = fNFrames*fPulseDepth;
 
@@ -349,9 +366,11 @@ void TDS::Flush(){
   // NHits
   BlockHead.NHits = fNFrames*fNSignals;//->from *2.
 
-  BlockHead.mVdiv[0] = fRangeChannelA;BlockHead.mVdiv[1] = fRangeChannelB;
-  BlockHead.mVdiv[2] = 0;BlockHead.mVdiv[3] = 0;
-  BlockHead.NegPolarity[0] =fPolarityA;BlockHead.NegPolarity[1] =fPolarityB;
+    for(int i=0;i<fNSignals;i++){
+      BlockHead.mVdiv[i] = fRangeChannel[i];
+      BlockHead.NegPolarity[i] =fPolarity[i];
+    }
+
   BlockHead.Pretrigger = fPreTrigger;
   BlockHead.PSize = fPulseDepth;
   BlockHead.SRate = fSamplingRate*1E6;

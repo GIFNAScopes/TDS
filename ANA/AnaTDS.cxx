@@ -20,9 +20,9 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot,
   TTree * tree = new TTree ("tree", "TDS data");
 
   uint64_t prevTime=0;
-  uint8_t mVdiv[4];
+  uint8_t mVdiv[TDS_MAX_SIGNALS];
 
-  Hit * myHits[4]={nullptr,nullptr,nullptr,nullptr};
+  Hit * myHits[TDS_MAX_SIGNALS];
 
   int nEvents=0, nHits=0, size=0;
   bool first = true;
@@ -39,7 +39,9 @@ void AnaTDS::analizeTDS(const std::string &fileRaw, const std::string &fileRoot,
 	pulse_depth = blockhead.PSize;
         std::cout<<"nEvents "<<nEvents<<" NHits "<<nHits<<std::endl;
         std::cout<< "SRATE: " << (double)srate << " PULSE DEPTH: " << pulse_depth<<" PRETRIGGER: "<< blockhead.Pretrigger << std::endl;
+        assert(nHits < TDS_MAX_SIGNALS);
         for(int i=0; i<nHits;i++){
+          myHits[i] = nullptr;
           std::cout<<"mVdiv "<<(int)blockhead.mVdiv[i]<<std::endl;
           std::cout<<"Polarity ch"<<i+1<<" "<<(int)blockhead.NegPolarity[i]<<std::endl;
           std::string hitName = "Hit"+std::to_string(i);
