@@ -71,7 +71,7 @@ void Hit::analyzeHit( ){
 
   Area = AreaToPhys(integral);
   Max = maxBin;
-  High = TimeToPhys(max);
+  High = HighToPhys(max);
   DC = std::round(max);
   T0 = rsStart; // In points
   TEnd = pEnd; // In points
@@ -87,7 +87,7 @@ void Hit::analyzeHit( ){
 std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
 
 
-    std::vector<double> smoothed(pulse_depth);
+    std::vector<double> smoothed(pulse_depth,0);
     
     for (int i = 0; i < pulse_depth; i++){
     int nPoints=0;
