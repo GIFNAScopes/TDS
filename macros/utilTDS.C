@@ -4,17 +4,16 @@
 
 #include "Hit.h"
 
-double entries=0;
 int i=0;
 int NHITS=0;
-
 const std::vector <int> colors {kBlue, kRed, kGreen,kBlack };
 
 TFile * myFile=nullptr;
 TChain * tree=nullptr;
-std::vector<Hit *> myHits;
-std::vector<TH1F *> pulseAll;
-std::vector<TH1C *> histos;
+std::map<std::string, Hit *> myHits;
+std::map<std::string, TH1F *> pulseAll;
+std::map<std::string, TH1F *> histos;
+THStack *hs = nullptr;
 
 ///////////////////////////////////////////////////
 // Read spectrum from ascii file and store it in h
@@ -57,21 +56,15 @@ TH1F * readSpc(const std::string &filename, int nChannels){
 void saveSpc(TH1 * h, const std::string &filename)
 {
   ofstream fq (filename, ios::out);
-  // MARIA 04/03/06
-  //for (int i = 0; i<h->GetNbinsX(); i++)
-  for (int b = 1; b<=h->GetNbinsX(); b++)
-  {
-    fq << h->GetBinContent(b) << "\n";
-  }
+    for (int b = 1; b<=h->GetNbinsX(); b++){
+      fq << h->GetBinContent(b) << "\n";
+    }
   fq.close();
 }
 
 // SOLO CARGA  LOS DATOS Y LANZA EL VIEWER, SIN REPRESENTAR NADA
-// Usage: readData filename (optional)ini (optional)end
-// Filename : FILENAMExxxx.raw
-// if ini and end are not given, read all files of this run
-// if only ini is given, read only that file
-// if both are given, read from ini to end
+// Usage: readData filename 
+// Filename : FILENAMExxxx.raw.xx
 void readData(const std::string &fileName)
 {
 
@@ -102,50 +95,46 @@ void readData(const std::string &fileName)
     }
 
   // Set stimation of the tree size 
-  entries = tree->GetEntries();
+  int entries = tree->GetEntries();
   tree->SetEstimate(entries);
 
   //tree->Print();
 
    for(NHITS=0;NHITS<4;NHITS++) {
     std::string brName = "Hit"+std::to_string(NHITS);
-    if(!tree->GetBranch(brName.c_str()))break;
+    if(!tree->GetBranch(brName.c_str()))continue;
+    Hit *hit = nullptr;
+    myHits[brName] = hit;
   }
 
-  myHits.resize(NHITS,nullptr);
+  std::cout<<"Number of channels "<<myHits.size()<<std::endl;
 
-  std::cout<<"Number of hits "<<NHITS<<std::endl;
-
-  for(int b=0;b<NHITS;b++){
-    std::string brName = "Hit"+std::to_string(b);
-    std::cout<<brName<<std::endl;
-    tree->SetBranchAddress(brName.c_str(), &myHits[b]);
+  int c=0;
+  for(auto & [brName, hit] : myHits ){
+    tree->SetBranchAddress(brName.c_str(), &hit);
     tree->GetEntry(0);
-    std::cout<<"CH "<<b+1<< " "<<  myHits[b]->GetVScale()<<" mv/Div "<<std::endl;
+    std::cout<<brName<< " "<<  hit->GetVScale()<<" mv/Div "<<std::endl;
+      if(c==0){
+        std::cout << "Sampling Rate: " << (hit->GetSRate()) << " Hz  ( " << 1E9/(hit->GetSRate()) << " ns/pt)"<< std::endl;
+        std::cout << "Size Pulse: " << (hit->GetPulseDepth()) << " points"<<std::endl;
+        std::cout << "Pulse Length: "<< 1E9*float(hit->GetPulseDepth())/(hit->GetSRate())<< " ns"<< std::endl;
+        std::cout << "PreTrigger: " << hit->GetPretrigger() << " %" << std::endl << std::endl;
+
+        std::cout << "N Entries: " << entries << std::endl;
+        tree->GetEntry(entries-1);
+        double auxRTime = hit->GetClockTickRT()*1E-6;
+        std::cout << "Real Time: " << auxRTime <<" seconds"<< std::endl;
+        double auxLTime = hit->GetClockTickLT()*1E-6;
+        std::cout << "Live Time: " << auxLTime<<" seconds" << std::endl;
+        tree->GetEntry(0);
+        std::cout << "Inc Real Time: " << auxRTime - hit->GetClockTickRT()*1E-6<<" seconds" << std::endl;
+        std::cout << "Inc Live Time: " << auxLTime - hit->GetClockTickLT()*1E-6<<" seconds" << std::endl;
+      }
+    c++;
   }
-
-
-    
-
-  std::cout << "Sampling Rate: " << (myHits[0]->GetSRate()) << " Hz  ( " << 1E9/(myHits[0]->GetSRate()) << " ns/pt)"<< std::endl;
-  std::cout << "Size Pulse: " << (myHits[0]->GetPulseDepth()) << " points"<<std::endl;
-  std::cout << "Pulse Length: "<< 1E9*float(myHits[0]->GetPulseDepth())/(myHits[0]->GetSRate())<< " ns"<< std::endl;
-  std::cout << "PreTrigger: " << myHits[0]->GetPretrigger() << " %" << std::endl << std::endl;
-  //gROOT->ProcessLine(".x  $ANAPIII/alias.C");
-
-  // Maria 150307
-  std::cout << "N Entries: " << entries << std::endl;
-  tree->GetEntry(entries-1);
-  double auxRTime = myHits[0]->GetClockTickRT()*1E-6;
-  std::cout << "Real Time: " << auxRTime <<" seconds"<< std::endl;
-  double auxLTime = myHits[0]->GetClockTickLT()*1E-6;
-  std::cout << "Live Time: " << auxLTime<<" seconds" << std::endl;
-  tree->GetEntry(0);
-  std::cout << "Inc Real Time: " << auxRTime - myHits[0]->GetClockTickRT()*1E-6<<" seconds" << std::endl;
-  std::cout << "Inc Live Time: " << auxLTime - myHits[0]->GetClockTickLT()*1E-6<<" seconds" << std::endl;
 
 }
-///////////////////////////////////////////////////
+
 // Add data to an existing tree
 //  Be careful with RT and LT clocks, they are not arranged
 ///////////////////////////////////////////////////
@@ -180,16 +169,17 @@ void addData(const std::string &fileName)
           sprintf(outFileName,"%s.%02d.root", fileName.c_str(), nFiles);
         }
     }
-
+ 
   // Set stimation of the tree size 
-  entries = tree->GetEntries();
+  int entries = tree->GetEntries();
   tree->SetEstimate(entries);
   cout << "N Entries : " << entries << endl;
 }
 
+
+
 ///////////////////////////////////////////
 // Draw pulses corresponding to p event
-// ALWAIS AFTER drawSpc !!!!
 // p number corresponds to index in 'list' Event list
 // if it exists
 /////////////////////////////////////////
@@ -199,105 +189,101 @@ void drawPulse(int p){
   tree->SetEventList(list);
 
   int ent = tree->GetEntryNumber(p);
-  cout << ent << endl;
-    // Maria 2/08/05
+  cout<<"Drawing entry " << ent << endl;
+
   if(ent<0 || ent>= tree->GetEntries()){
     std::cout<<"Entry "<<p <<" out of range 0-"<<tree->GetEntries()-1<<std::endl;
     return;
   }
 
-   for(auto &h : histos){
-     delete h;
-   }
-   histos.clear();
+  for(auto &[chName, h] : histos)
+    delete h;
+
+  histos.clear();
 
   tree->GetEntry(ent); 
- 
-  histos.resize(NHITS);
- 
-  for(int iii=0;iii<NHITS;iii++){
-      histos[iii] = (TH1C *)(myHits[iii]->getHisto(iii));
-      histos[iii]->SetLineColor(colors[iii]);
-	if(iii==0){
-  	  histos[iii]->SetStats(0);
-	  histos[iii]->GetYaxis()->SetLabelSize(.03);
-	  histos[iii]->GetXaxis()->SetLabelSize(.03);
-	  histos[iii]->GetYaxis()->SetRangeUser(-128,128);
-	  histos[iii]->Draw();
-	} else {
-	  histos[iii]->Draw("SAME");
-	}
+
+  if(hs)delete hs;
+  hs = new THStack("Pulses","");
+
+  int c=0;
+  for(auto & [chName, hit] : myHits ){
+      histos[chName] = (TH1F *)(hit->getHisto(chName));
+      histos[chName]->SetLineColor(colors[c%4]);
+      histos[chName]->SetMarkerColor(colors[c%4]);
+      hs->Add(histos[chName],chName.c_str());
+      c++;
   }
 
+  hs->Draw("nostack,lp");
+  hs->GetYaxis()->SetTitle("Amplitude (mV)");
+  hs->GetXaxis()->SetTitle("Time (ns)");
+
+  gPad->BuildLegend(0.75,0.75,0.95,0.95,"");
 }
 
 /////////////////////////////////////////////////////////
 // Add together all pulses in 'list' event list
 // and plot it
-// ALWAYS AFTER drawSpc!!!!!
-// The pulses are stored in pulse0All, pulse1All. 
-// To access them, do
-// TH1F * paux0 = (TH1F*)gDirectory->Get("pulse0All")
-// TH1F * paux1 = (TH1F*)gDirectory->Get("pulse1All")
 ///////////////////////////////////////////////////////
 void drawAllPulses(std::string fName ="")
 {
 
- for(auto &h : histos){
+  for(auto &[chName, h] : histos)
     delete h;
- }
- histos.clear();
 
- for(auto &p : pulseAll){
-   delete p;
- }
+  histos.clear();
 
- pulseAll.clear();
+  for(auto &[pName, p] : pulseAll)
+    delete p;
+
+  pulseAll.clear();
 
   TEventList * list = (TEventList*)(gDirectory->Get("list"));
   tree->SetEventList(list);
 
-  // Maria 2/08/05
   int ent,cont;
   int max =tree->GetSelectedRows();
 
   if(max==0) max=tree->GetEntries(); //if no list selected use all pulses.
 
-  pulseAll.resize(NHITS);
-    for(int iii=0;iii<NHITS;iii++) {
-      std::string pName = "Pulse"+std::to_string(iii+1);
-      pulseAll[iii] = new TH1F (pName.c_str(), pName.c_str(),myHits[iii]->GetPulseDepth(),0,myHits[iii]->GetPulseDepth());// 2500
+    for(const auto & [chName, hit] : myHits ){
+      pulseAll[chName] = new TH1F (chName.c_str(), chName.c_str(),hit->GetPulseDepth(),0,hit->GetPulseDepth()*1E9/hit->GetSRate());
+      pulseAll[chName]->GetYaxis()->SetTitle("Amplitude (mV)");
+      pulseAll[chName]->GetXaxis()->SetTitle("Time (ns)");
     }
 
   for (cont = 0; cont<max; cont ++){
     ent = tree->GetEntryNumber(cont);
     tree->GetEntry(ent); 
-      for(int iii=0;iii<NHITS;iii++){
-        TH1C *h = (TH1C *)(myHits[iii]->getHisto(iii));
-        pulseAll[iii]->Add(h);
+      
+      for(auto & [chName, hit] : myHits ){
+        auto h = hit->getHisto(chName);
+        pulseAll[chName]->Add(h);
         delete h;
       }
   }
 
-  // Maria 260307
-  for(int iii=0;iii<NHITS;iii++) {
-    pulseAll[iii]->Scale(1./max);
-    pulseAll[iii]->SetLineColor(colors[iii]);
-    if(iii==0){
-      pulseAll[iii]->SetStats(0);
-      pulseAll[iii]->GetYaxis()->SetLabelSize(.03);
-      pulseAll[iii]->GetXaxis()->SetLabelSize(.03);
-      if(NHITS>1)pulseAll[iii]->GetYaxis()->SetRangeUser(-128,128);
-      pulseAll[iii]->Draw();
-    } else {
-      pulseAll[iii]->Draw("SAME");
-    }
+  if(hs)delete hs;
+  hs = new THStack("All pulses","");
 
+  int c=0;
+  for(auto & [chName, pulse] : pulseAll ) {
+    pulse->Scale(1./max);
+    pulse->SetLineColor(colors[c%4]);
+    pulse->SetMarkerColor(colors[c%4]);
+    hs->Add(pulse,chName.c_str());
 	if(!fName.empty()){
-	  std::string name = "CH"+std::to_string(iii)+"_"+ fName;
-	  saveSpc(pulseAll[iii], name);
+	  std::string name = chName+"_"+ fName;
+	  saveSpc(pulse, name);
 	}
+    c++;
   }
 
+  hs->Draw("nostack,lp");
+  hs->GetYaxis()->SetTitle("Amplitude (V)");
+  hs->GetXaxis()->SetTitle("Time (s)");
+
+  gPad->BuildLegend(0.75,0.75,0.95,0.95,"");
 }
 

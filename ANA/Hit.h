@@ -81,7 +81,7 @@ public:
     void analyzeHit( );
     std::vector<double> GetSignalSmoothed(int neighbours = 5);
     
-    TH1C *getHisto(const int &ch );//!
+    TH1F *getHisto(const std::string &chName );//!
 
    ClassDef(Hit, 1)
 

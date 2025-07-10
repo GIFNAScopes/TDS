@@ -104,12 +104,12 @@ std::vector<double> Hit::GetSignalSmoothed(int neighbours) {
   return smoothed;
 }
 
-TH1C *Hit::getHisto( const int &ch ){
+TH1F *Hit::getHisto( const std::string &chName ){
 
-  std::string hName = "CH"+std::to_string(ch)+"_Hit"+std::to_string(ident);
-  TH1C *h = new TH1C (hName.c_str(),hName.c_str(),Pulse.size(),0,Pulse.size());
+  std::string hName = chName+"_Ev"+std::to_string(ident);
+  TH1F *h = new TH1F (hName.c_str(),hName.c_str(),Pulse.size(),0,TimeToPhys(Pulse.size()));
   //auto sm = GetSignalSmoothed();
-  for(int i=0;i<Pulse.size();i++)h->SetBinContent(i+1,Pulse[i]);
+  for(int i=0;i<Pulse.size();i++)h->SetBinContent(i+1, HighToPhys(Pulse[i]));
   return h;
 
 }
