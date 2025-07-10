@@ -35,4 +35,5 @@ jobs:
         cmake --install build
         source ${{ env.INSTALL_PATH }}/thisTDS.sh
         TDSRoot -b -q
+        bash ${{ env.INSTALL_PATH }}/scripts/processdata.sh test/Test00001.raw.01
     
