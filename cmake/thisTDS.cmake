@@ -23,6 +23,11 @@ else
     return 1
 fi
 
+\# if thisroot.sh script is found we load the same ROOT version as used in compilation
+if [[ -f \\\"${thisROOT}\\\" ]]; then
+    source ${thisROOT}
+fi
+
 if [ \\\$TDS_PATH ] ; then
 echo switching to TDS installed in \\\${thisdir}
 _PATH=`echo \\\$PATH | sed -e \\\"s\#\\\${TDS_PATH}/bin:\#\#g\\\"`
